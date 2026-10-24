@@ -40,9 +40,10 @@ database/schema.sql     DDL 5 tabel  |  seed.sql  kategori bawaan
 ## Menjalankan lokal
 
 ```bash
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env                                   # isi DATABASE_URL dari Supabase
+Copy-Item env.example .env
 ```
 
 ### Menyiapkan Supabase
@@ -116,17 +117,33 @@ Error selalu `{"error": "..."}`: `400` input tidak valid, `404` tidak ditemukan,
 
 ## Tes
 
-```bash
+Aktifkan virtual environment dan pasang dependensi pengujian:
+
+```powershell
 pip install -r requirements-dev.txt
-pytest tests/test_schemas.py                            # tanpa database
-TEST_DATABASE_URL=postgresql://... pytest tests/test_api.py   # database UJI, bukan data nyata
 ```
 
-## Status verifikasi
+Jalankan pengujian API lokal:
+
+```powershell
+pytest -v test_api.py
+```
+
+Hasil pengujian terakhir: **13 tes lulus**.
+
+Pengujian API menggunakan konfigurasi aplikasi yang terhubung ke database. Gunakan database dan data uji, bukan data keuangan nyata.
+
+File `tests/test_api.py` dan `tests/test_schemas.py` merupakan file terpisah; jangan menganggap hasil pengujiannya lulus sebelum benar-benar dijalankan.
+
+
+## Status Verifikasi
 
 | Bagian | Status |
 |---|---|
-| `schema.sql`, `seed.sql` (idempoten, constraint, cascade, RESTRICT) | Diuji di PostgreSQL 16 lokal; **belum dicoba di project Supabase** (termasuk perintah RLS) |
-| Query ringkasan (total saldo, per kategori) | Padanan SQL-nya diuji di PostgreSQL 16 |
-| Validasi Pydantic & helper | 16 tes lulus |
-| API FastAPI end-to-end, `tests/test_api.py`, deploy Vercel | **Belum dijalankan**; jalankan di mesin Anda dan isi checklist |
+| Koneksi database Supabase | Berhasil diverifikasi melalui endpoint `/health/db` |
+| Struktur database | Lima tabel terdeteksi di Supabase |
+| API FastAPI lokal | 13 tes pada `test_api.py` lulus |
+| Ringkasan saldo | Telah diuji menggunakan data contoh |
+| Deployment Vercel | Belum terkonfirmasi; perlu diuji setelah deployment |
+| Autentikasi | Belum tersedia; API masih berupa demo dan menggunakan `user_id` |
+

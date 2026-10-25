@@ -31,12 +31,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-#for module in (users, wallets, categories, transactions, budgets, summary, data_io):
-#    app.include_router(module.router)
-API_PREFIX = "/api/v1"
-
 for module in (users, wallets, categories, transactions, budgets, summary, data_io):
-    app.include_router(module.router, prefix=API_PREFIX)
+    app.include_router(module.router)
 
 
 # --------------------------------------------------------------------------

@@ -1,0 +1,1703 @@
+{
+  "info": {
+    "name": "Finance Tracker API",
+    "description": "Personal Finance Tracker API (FastAPI + PostgreSQL). Versi demo tanpa autentikasi: identitas pengguna dikirim lewat `user_id`.\n\nCARA PAKAI AMAN\n1. Jalankan request secara manual dan berurutan, jangan memakai Collection Runner pada seluruh collection.\n2. Mulai dari: Users > Tambah Pengguna, Wallets > Tambah Dompet, Categories > Daftar Kategori (Pengeluaran & Pemasukan). Request tersebut mengisi collection variable `user_id`, `wallet_id`, `category_expense_id`, `category_income_id`.\n3. Variable ID sengaja kosong secara default supaya request DELETE tidak mengenai data demo secara tidak sengaja.\n4. Request bertanda PERHATIAN mengubah/menghapus data. Pakai data uji saja.\n\nCollection ini tidak berisi password, DATABASE_URL, atau secret apa pun.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health Check",
+      "description": "Pengecekan API dan koneksi database. Aman, read-only.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [],
+              "query": []
+            },
+            "description": "Memastikan API berjalan. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya version', function () { pm.expect(pm.response.json()).to.have.property('version'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cek Koneksi Database",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health/db",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health",
+                "db"
+              ],
+              "query": []
+            },
+            "description": "Mengecek koneksi ke PostgreSQL. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Users",
+      "description": "CRUD pengguna.",
+      "item": [
+        {
+          "name": "Tambah Pengguna",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ],
+              "query": []
+            },
+            "description": "Membuat pengguna uji baru. Email dibuat unik dengan timestamp. Menyimpan `user_id` ke collection variable. Jalankan ini lebih dulu.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pengguna Uji Postman\",\n  \"email\": \"postman-{{$timestamp}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = pm.response.json().data.id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('user_id', String(_v)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Pengguna",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ],
+              "query": []
+            },
+            "description": "Daftar semua pengguna (untuk demo). Read-only. Respons dapat memuat data pengguna lain."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('data berupa array', function () { pm.expect(pm.response.json().data).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Pengguna",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `user_id` terisi (jalankan Tambah Pengguna). Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('email ada', function () { pm.expect(pm.response.json().data).to.have.property('email'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah Pengguna",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}"
+              ],
+              "query": []
+            },
+            "description": "Mengubah sebagian data pengguna. Minimal satu field.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pengguna Uji Postman (diubah)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus Pengguna",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}"
+              ],
+              "query": []
+            },
+            "description": "Menghapus pengguna beserta SEMUA dompet, kategori, transaksi, dan anggaran miliknya (CASCADE). Jalankan terakhir, hanya untuk pengguna uji.\n\nPERHATIAN: request ini MENGHAPUS data. Jalankan manual, satu per satu, hanya pada data uji yang dibuat lewat collection ini. Jangan dijalankan lewat Collection Runner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('id sesuai', function () { pm.expect(String(pm.response.json().data.id)).to.eql(pm.collectionVariables.get('user_id')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Wallets",
+      "description": "CRUD dompet.",
+      "item": [
+        {
+          "name": "Tambah Dompet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/wallets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wallets"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `user_id` terisi. Menyimpan `wallet_id`. Nama dompet unik per pengguna (dibuat unik dengan timestamp).\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"name\": \"Dompet Uji {{$timestamp}}\",\n  \"initial_balance\": 250000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = pm.response.json().data.id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('wallet_id', String(_v)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Dompet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/wallets?user_id={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wallets"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                }
+              ]
+            },
+            "description": "Prasyarat: `user_id` terisi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Dompet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wallets",
+                "{{wallet_id}}"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `wallet_id` terisi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah Dompet",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wallets",
+                "{{wallet_id}}"
+              ],
+              "query": []
+            },
+            "description": "Mengubah `name` dan/atau `initial_balance`.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dompet Uji (diubah) {{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus Dompet",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/wallets/{{wallet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wallets",
+                "{{wallet_id}}"
+              ],
+              "query": []
+            },
+            "description": "Ditolak dengan 409 jika dompet masih dipakai transaksi. Hapus transaksinya lebih dulu.\n\nPERHATIAN: request ini MENGHAPUS data. Jalankan manual, satu per satu, hanya pada data uji yang dibuat lewat collection ini. Jangan dijalankan lewat Collection Runner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Categories",
+      "description": "CRUD kategori. Kategori bawaan tidak bisa diubah/dihapus.",
+      "item": [
+        {
+          "name": "Daftar Kategori (Pengeluaran)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?user_id={{user_id}}&type=expense",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Opsional. Tanpa user_id hanya kategori bawaan."
+                },
+                {
+                  "key": "type",
+                  "value": "expense",
+                  "description": "income atau expense"
+                }
+              ]
+            },
+            "description": "Kategori bawaan + milik pengguna bertipe expense. Menyimpan `category_expense_id` (kategori bawaan pertama bertipe expense). Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = (pm.response.json().data.find(function (c) { return c.is_default && c.type === 'expense'; }) || {}).id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('category_expense_id', String(_v)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Kategori (Pemasukan)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?user_id={{user_id}}&type=income",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Opsional."
+                },
+                {
+                  "key": "type",
+                  "value": "income",
+                  "description": "income atau expense"
+                }
+              ]
+            },
+            "description": "Kategori bawaan + milik pengguna bertipe income. Menyimpan `category_income_id`. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = (pm.response.json().data.find(function (c) { return c.is_default && c.type === 'income'; }) || {}).id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('category_income_id', String(_v)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Kategori",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_expense_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{category_expense_id}}"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: jalankan Daftar Kategori (Pengeluaran) agar `category_expense_id` terisi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tambah Kategori",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `user_id` terisi. Membuat kategori milik pengguna. Menyimpan `custom_category_id`. Kombinasi nama + tipe harus unik.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"name\": \"Kategori Uji {{$timestamp}}\",\n  \"type\": \"expense\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = pm.response.json().data.id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('custom_category_id', String(_v)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah Kategori",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{custom_category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{custom_category_id}}"
+              ],
+              "query": []
+            },
+            "description": "Hanya kategori milik pengguna (kategori bawaan menghasilkan 409). Prasyarat: `custom_category_id` terisi.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kategori Uji (diubah) {{$timestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus Kategori",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{custom_category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "{{custom_category_id}}"
+              ],
+              "query": []
+            },
+            "description": "Ditolak (409) untuk kategori bawaan atau yang masih dipakai transaksi/anggaran. Prasyarat: `custom_category_id` terisi.\n\nPERHATIAN: request ini MENGHAPUS data. Jalankan manual, satu per satu, hanya pada data uji yang dibuat lewat collection ini. Jangan dijalankan lewat Collection Runner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Transactions",
+      "description": "CRUD transaksi, filter, dan paginasi.",
+      "item": [
+        {
+          "name": "Tambah Transaksi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `user_id`, `wallet_id`, dan `category_expense_id` terisi (Tambah Pengguna, Tambah Dompet, Daftar Kategori). Tipe kategori harus sama dengan `type`. Menyimpan `transaction_id`.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{category_expense_id}}\",\n  \"type\": \"expense\",\n  \"amount\": 18000,\n  \"transaction_date\": \"{{transaction_date}}\",\n  \"note\": \"Makan siang (uji Postman)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = pm.response.json().data.id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('transaction_id', String(_v)); }",
+                  "pm.test('amount berupa string 2 desimal', function () { pm.expect(pm.response.json().data.amount).to.match(/^\\d+\\.\\d{2}$/); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions?user_id={{user_id}}&wallet_id=&type=&start_date=&end_date=&limit=50&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                },
+                {
+                  "key": "wallet_id",
+                  "value": "",
+                  "description": "Opsional. Hapus centang jika tidak dipakai."
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Opsional: income atau expense."
+                },
+                {
+                  "key": "start_date",
+                  "value": "",
+                  "description": "Opsional: YYYY-MM-DD."
+                },
+                {
+                  "key": "end_date",
+                  "value": "",
+                  "description": "Opsional: YYYY-MM-DD."
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "1-200, default 50."
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Default 0."
+                }
+              ]
+            },
+            "description": "Daftar transaksi satu pengguna dengan paginasi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya data dan meta paginasi', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.data).to.be.an('array');",
+                  "  pm.expect(j.meta).to.have.all.keys('total', 'limit', 'offset');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Transaksi per Kategori",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions?user_id={{user_id}}&category_id={{category_expense_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{category_expense_id}}",
+                  "description": "Filter kategori."
+                }
+              ]
+            },
+            "description": "Filter per kategori (`getTransaksiByKategori`). Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya data dan meta paginasi', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j.data).to.be.an('array');",
+                  "  pm.expect(j.meta).to.have.all.keys('total', 'limit', 'offset');",
+                  "});",
+                  "pm.test('semua transaksi sesuai kategori', function () {",
+                  "  var cid = Number(pm.collectionVariables.get('category_expense_id'));",
+                  "  pm.response.json().data.forEach(function (t) { pm.expect(t.category_id).to.eql(cid); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Transaksi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "{{transaction_id}}"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `transaction_id` terisi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ganti Seluruh Transaksi (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "{{transaction_id}}"
+              ],
+              "query": []
+            },
+            "description": "Semua field wajib dikirim ulang (`note` opsional). `user_id` tidak bisa diubah.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_id\": \"{{wallet_id}}\",\n  \"category_id\": \"{{category_expense_id}}\",\n  \"type\": \"expense\",\n  \"amount\": 25000,\n  \"transaction_date\": \"{{transaction_date}}\",\n  \"note\": \"Makan siang + minum (PUT)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah Sebagian Transaksi (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "{{transaction_id}}"
+              ],
+              "query": []
+            },
+            "description": "Minimal satu field. `note` boleh `null`.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Revisi (PATCH)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus Transaksi",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "{{transaction_id}}"
+              ],
+              "query": []
+            },
+            "description": "Menghapus satu transaksi (`hapusTransaksi`).\n\nPERHATIAN: request ini MENGHAPUS data. Jalankan manual, satu per satu, hanya pada data uji yang dibuat lewat collection ini. Jangan dijalankan lewat Collection Runner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Budgets",
+      "description": "CRUD anggaran bulanan.",
+      "item": [
+        {
+          "name": "Tambah Anggaran",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budgets"
+              ],
+              "query": []
+            },
+            "description": "Hanya untuk kategori expense. `budget_month` harus tanggal 1. Satu anggaran per (kategori, bulan): mengulang request menghasilkan 409. Prasyarat: `user_id` dan `category_expense_id` terisi. Menyimpan `budget_id`.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"category_id\": \"{{category_expense_id}}\",\n  \"amount_limit\": 500000,\n  \"budget_month\": \"{{budget_month}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "var _v = pm.response.json().data.id;",
+                  "if (_v !== undefined && _v !== null) { pm.collectionVariables.set('budget_id', String(_v)); }",
+                  "pm.test('punya percentage_used', function () { pm.expect(pm.response.json().data).to.have.property('percentage_used'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daftar Anggaran",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets?user_id={{user_id}}&month={{month}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budgets"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                },
+                {
+                  "key": "month",
+                  "value": "{{month}}",
+                  "description": "Opsional, format YYYY-MM."
+                }
+              ]
+            },
+            "description": "Read-only. Memuat `spent`, `remaining`, `percentage_used`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detail Anggaran",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budgets",
+                "{{budget_id}}"
+              ],
+              "query": []
+            },
+            "description": "Prasyarat: `budget_id` terisi. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ubah Anggaran",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budgets",
+                "{{budget_id}}"
+              ],
+              "query": []
+            },
+            "description": "Mengubah `amount_limit`.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount_limit\": 600000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hapus Anggaran",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "budgets",
+                "{{budget_id}}"
+              ],
+              "query": []
+            },
+            "description": "Menghapus satu anggaran.\n\nPERHATIAN: request ini MENGHAPUS data. Jalankan manual, satu per satu, hanya pada data uji yang dibuat lewat collection ini. Jangan dijalankan lewat Collection Runner."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Summary",
+      "description": "Ringkasan saldo dan pengeluaran per kategori.",
+      "item": [
+        {
+          "name": "Ringkasan Saldo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/summary?user_id={{user_id}}&wallet_id=",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                },
+                {
+                  "key": "wallet_id",
+                  "value": "",
+                  "description": "Opsional. Hapus centang untuk semua dompet."
+                }
+              ]
+            },
+            "description": "Saldo awal, total pemasukan/pengeluaran, saldo saat ini. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('field ringkasan lengkap', function () {",
+                  "  pm.expect(pm.response.json().data).to.include.all.keys('initial_balance','total_income','total_expense','current_balance','total_transactions');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ringkasan per Kategori",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/summary/by-category?user_id={{user_id}}&month={{month}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "summary",
+                "by-category"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                },
+                {
+                  "key": "month",
+                  "value": "{{month}}",
+                  "description": "Opsional, format YYYY-MM. Default bulan berjalan."
+                }
+              ]
+            },
+            "description": "Pengeluaran per kategori pada satu bulan. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('punya categories', function () { pm.expect(pm.response.json().data.categories).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Export-Import",
+      "description": "Ekspor dan impor JSON.",
+      "item": [
+        {
+          "name": "Ekspor Data ke JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/export?user_id={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}",
+                  "description": "Wajib. Isi dengan ID pengguna uji."
+                }
+              ]
+            },
+            "description": "Cadangan data satu pengguna. Read-only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('struktur ekspor lengkap', function () {",
+                  "  pm.expect(pm.response.json().data).to.include.all.keys('exported_at','user','wallets','categories','transactions','budgets');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Impor Transaksi dari JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "import"
+              ],
+              "query": []
+            },
+            "description": "Impor 1-500 transaksi sekaligus (semua atau tidak sama sekali). Prasyarat: `user_id`, `wallet_id`, `category_expense_id`, `category_income_id` terisi. Body berisi 2 transaksi uji.\n\nPERHATIAN: request ini mengubah data di database.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"transactions\": [\n    {\n      \"wallet_id\": \"{{wallet_id}}\",\n      \"category_id\": \"{{category_expense_id}}\",\n      \"type\": \"expense\",\n      \"amount\": 12000,\n      \"transaction_date\": \"{{transaction_date}}\",\n      \"note\": \"Impor uji 1\"\n    },\n    {\n      \"wallet_id\": \"{{wallet_id}}\",\n      \"category_id\": \"{{category_income_id}}\",\n      \"type\": \"income\",\n      \"amount\": 50000,\n      \"transaction_date\": \"{{transaction_date}}\",\n      \"note\": \"Impor uji 2\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response berupa JSON', function () { pm.response.to.be.json; });",
+                  "pm.test('Response punya message dan data', function () {",
+                  "  var j = pm.response.json();",
+                  "  pm.expect(j).to.have.property('message');",
+                  "  pm.expect(j).to.have.property('data');",
+                  "});",
+                  "pm.test('imported = 2', function () { pm.expect(pm.response.json().data.imported).to.eql(2); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://finance-tracker-rizall.vercel.app",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "wallet_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_expense_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_income_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "custom_category_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "budget_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "transaction_date",
+      "value": "2026-10-25",
+      "type": "string"
+    },
+    {
+      "key": "month",
+      "value": "2026-10",
+      "type": "string"
+    },
+    {
+      "key": "budget_month",
+      "value": "2026-10-01",
+      "type": "string"
+    }
+  ]
+}

@@ -113,7 +113,7 @@ Error selalu `{"error": "..."}`: `400` input tidak valid, `404` tidak ditemukan,
 3. Tambah Environment Variable `DATABASE_URL` berisi connection string **Transaction pooler** Supabase (port 6543).
 4. Deploy, lalu uji `GET https://<project>.vercel.app/` dan `/health/db`, kemudian ulangi checklist di URL Vercel.
 
-`vercel.json` meneruskan semua path ke `api/index.py`. Cara Vercel mendeteksi FastAPI bisa berubah; bila build gagal, cek panduan resmi: https://vercel.com/docs/frameworks/backend/fastapi
+Konfigurasi deployment Vercel diatur melalui `vercel.json`. Jika terjadi kegagalan build atau deployment, periksa log deployment serta panduan resmi Vercel: https://vercel.com/docs/frameworks/backend/fastapi
 
 ## Tes
 
@@ -144,6 +144,6 @@ File `tests/test_api.py` dan `tests/test_schemas.py` merupakan file terpisah; ja
 | Struktur database | Lima tabel terdeteksi di Supabase |
 | API FastAPI lokal | 13 tes pada `test_api.py` lulus |
 | Ringkasan saldo | Telah diuji menggunakan data contoh |
-| Deployment Vercel | Belum terkonfirmasi; perlu diuji setelah deployment |
+| Deployment Vercel | Berhasil di-deploy |
 | Autentikasi | Belum tersedia; API masih berupa demo dan menggunakan `user_id` |
 
